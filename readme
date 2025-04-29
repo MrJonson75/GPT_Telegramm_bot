@@ -1,0 +1,86 @@
+Telegram Bot with AI Features 🤖✨
+Bot Preview
+
+A multifunctional Telegram bot built with Python and aiogram 3 that provides various AI-powered features including random facts, ChatGPT interface, celebrity conversations, and quizzes.
+
+Features 🌟
+Random Fact (/random) - Get interesting facts with AI-generated content
+
+ChatGPT Interface (/gpt) - Directly interact with OpenAI's ChatGPT
+
+Celebrity Chat (/talk) - Have conversations with historical figures
+
+Quiz Game (/quiz) - Test your knowledge in various topics with score tracking
+
+Technologies Used 🛠️
+Python 3.10+
+
+aiogram 3 (asynchronous Telegram Bot API)
+
+OpenAI API (GPT-3.5-turbo)
+
+Asynchronous programming (asyncio)
+
+Project Structure 📂
+my_bot/
+├── app.py                 # Entry point
+├── config.py              # Configuration
+├── misc.py                # Configuration start and shutdown
+├── handlers/              # Command handlers
+│   ├── command.py         # /start command
+│   ├── random_fact.py     # /random command
+│   ├── gpt_interface.py   # /gpt command
+│   ├── talk.py            # /talk command
+│   └── quiz.py            # /quiz command
+├── keyboards/             # Bot keyboards
+│   └── keyboard.py        # Shared keyboards
+├── resources/             # media files
+└── utils/                 # Utility functions
+    ├── chatgpt.py         # OpenAI API wrapper
+    └── images.py          # Image handling
+Setup Instructions 🚀
+Prerequisites
+Python 3.10 or later
+
+Telegram Bot Token from @BotFather
+
+OpenAI API key
+
+Installation
+Clone the repository:
+
+bash
+git clone https://github.com/yourusername/ai-telegram-bot.git
+cd ai-telegram-bot
+Install dependencies:
+
+bash
+pip install -r requirements.txt
+Create a .env file in the project root:
+
+env
+BOT_TOKEN=your_telegram_bot_token
+OPENAI_API_KEY=your_openai_api_key
+
+Run the bot:
+
+bash
+python app.py
+Usage Guide 📖
+Start the bot with /start command
+
+Choose from available options:
+
+/random - Get random facts
+
+/gpt - Chat with AI (reply to any message)
+
+/talk - Talk with historical figures
+
+/quiz - Play knowledge quiz
+
+Contribution 🤝
+Contributions are welcome! Please open an issue or submit a pull request for any improvements.
+
+
+Enjoy using the bot! For any questions, please open an issue in this repository.

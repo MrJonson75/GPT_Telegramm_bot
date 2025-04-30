@@ -5,8 +5,7 @@ from config import Config
 
 class Keyboards:
     """
-    Класс inline-клавиатур для бота
-    Все методы возвращают объект InlineKeyboardMarkup
+    Класс inline и Reply-клавиатур для бота
     """
 
     @staticmethod
@@ -28,6 +27,11 @@ class Keyboards:
         return builder.as_markup()
 
 
+    @staticmethod
+    def return_gpt_keyboard():
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🏠 Закончить", callback_data="start")
+        return builder.as_markup()
 
 
 

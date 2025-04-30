@@ -13,8 +13,15 @@ class Config:
     TELEGRAM_TOKEN = os.getenv("TOKEN")
     OPENAI_API_KEY = os.getenv("GPT_TOKEN")
     PROXY = os.getenv("PROXY")
-    user_quizzes = {}  # {user_id: {"topic": topic, "score": 0, "current_question": ""}}
-    user_sessions = {}  # {user_id: {"personality": prompt}}
+    USER_QUIZZES = {}  # {user_id: {"topic": topic, "score": 0, "current_question": ""}}
+    USER_SESSIONS = {}  # {user_id: {"personality": prompt}}
+    PERSONS = {
+        'cobain': 'Курт Кобейн',
+        'hawking': 'профессор Стивен Хокинг',
+        'nietzsche': 'Фридрих Ницше',
+        'queen': 'Королева Елизавета II',
+        'tolkien': 'Дж.Р.Р. Толкин'
+    }
 
     # Пути к изображениям
 
@@ -24,6 +31,11 @@ class Config:
         "talk": f"{image_patch()}/talk.jpg",
         "quiz": f"{image_patch()}/quiz.jpg",
         "main": f"{image_patch()}/main.jpg",
+        'cobain': f"{image_patch()}/talk_cobain.jpg",
+        'hawking': f"{image_patch()}/talk_hawking.jpg",
+        'nietzsche': f"{image_patch()}/talk_nietzsche.jpg",
+        'queen': f"{image_patch()}/talk_queen.jpg",
+        'tolkien': f"{image_patch()}/talk_tolkien.jpg"
     }
 
     @staticmethod

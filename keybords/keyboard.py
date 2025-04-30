@@ -33,6 +33,21 @@ class Keyboards:
         builder.button(text="🏠 Закончить", callback_data="start")
         return builder.as_markup()
 
+    @staticmethod
+    def get_personalities_keyboard():
+        builder = InlineKeyboardBuilder()
+        for person in Config.PERSONS.keys():
+            builder.button(text=Config.PERSONS[person].upper(), callback_data=f"talk_{person}")
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def return_talk_keyboard():
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🏠 Закончить", callback_data="start")
+        return builder.as_markup()
+
+
 
 
 

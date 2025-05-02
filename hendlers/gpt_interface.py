@@ -56,7 +56,8 @@ async def handle_gpt(message: Message, state: FSMContext):
     """
     # Отправляем заранее заготовленное изображение
     await send_image(message, Config.IMAGE_PATHS["gpt"])
-    await message.answer("Давайте начнём диалог с ChatGPT! Задайте ваш вопрос.")
+    answer_text = Config.get_messages('gpt')
+    await message.answer(answer_text)
     # Переходим в состояние ожидания вопроса
     await state.set_state(ChatState.waiting_for_question)
 
@@ -85,7 +86,7 @@ async def handle_chatgpt_question(message: Message, state: FSMContext):
 
 
 # Обработчик нажатия кнопки "Закончить" (на самом деле кнопки "start" по текущему коду)
-@gpt_router.callback_query(F.data == "start")
+@gpt_router.callback_query(F.data == "break")
 async def end_chat(callback: CallbackQuery, state: FSMContext):
     """
     Завершает диалог с ChatGPT по запросу пользователя.
@@ -102,3 +103,4 @@ async def end_chat(callback: CallbackQuery, state: FSMContext):
     await state.clear()  # Сбрасываем состояние
     await callback.message.answer("Диалог завершён. До новых встреч!")
     await callback.answer()  # Подтверждаем обработку callback
+    await callback.message.answer("/start")  # Отправляем команду /start

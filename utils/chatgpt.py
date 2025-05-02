@@ -17,16 +17,8 @@ import httpx
 from config import Config
 
 
+
 async def get_chatgpt_response(prompt: str) -> str:
-    """
-    Асинхронно получает ответ от ChatGPT (GPT-4) на заданный промпт.
-
-    Args:
-        prompt (str): Текст запроса (промпт), который будет отправлен в ChatGPT.
-
-    Returns:
-        str: Ответ от ChatGPT или сообщение об ошибке, если что-то пошло не так.
-    """
     try:
         # Инициализация асинхронного клиента OpenAI с прокси
         gpt_client = openai.AsyncOpenAI(
@@ -44,7 +36,7 @@ async def get_chatgpt_response(prompt: str) -> str:
                     'content': prompt,  # Наш запрос
                 }
             ],
-            model="gpt-4o-mini",  # Используемая модель (возможно, опечатка - должно быть "gpt-4" или "gpt-3.5-turbo"?)
+            model="gpt-4o-mini",  # Используемая модель
         )
 
         # Возвращаем текст первого ответа
@@ -56,3 +48,29 @@ async def get_chatgpt_response(prompt: str) -> str:
 
 
 
+async def get_quiz_question(topic: str, previous_question: str = None) -> str:
+    if topic == "quiz_more":
+        prompt = (f"Сгенерируй новый вопрос на ту же тему, что и предыдущий вопрос: '{previous_question}'. Ответ "
+                  f"должен быть коротким - несколько слов.")
+    else:
+        topics_map = {
+            "quiz_prog": "программирования на языке Python",
+            "quiz_math": "математических теорий (алгоритмы, теория множеств, матанализ)",
+            "quiz_biology": "биологии"
+        }
+        prompt = (f"Сгенерируй вопрос для квиза на тему {topics_map[topic]}. Ответ должен быть "
+                  f"коротким - несколько слов. Не используй вопросы с численными ответами.")
+    text = await get_chatgpt_response(prompt)
+    return text
+
+
+async def check_answer(question: str, user_answer: str) -> str:
+    prompt = f"""Вопрос: {question}
+    Ответ пользователя: {user_answer}
+
+    Если ответ правильный или очень похож на правильный, ответь "Правильно!".
+    Если ответ неправильный - ответь в формате: "Неправильно! 
+    Правильный ответ - {{answer}}", где {{answer}} - правильный ответ.
+    """
+    text = await get_chatgpt_response(prompt)
+    return text

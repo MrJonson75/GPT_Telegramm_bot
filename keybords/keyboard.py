@@ -1,5 +1,5 @@
+from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
-from typing import Optional, List
 from config import Config
 
 
@@ -30,7 +30,7 @@ class Keyboards:
     @staticmethod
     def return_gpt_keyboard():
         builder = InlineKeyboardBuilder()
-        builder.button(text="🏠 Закончить", callback_data="start")
+        builder.button(text="🏠 Закончить", callback_data="break")
         return builder.as_markup()
 
     @staticmethod
@@ -45,6 +45,28 @@ class Keyboards:
     def return_talk_keyboard():
         builder = InlineKeyboardBuilder()
         builder.button(text="🏠 Закончить", callback_data="start")
+        return builder.as_markup()
+
+    @staticmethod
+    def get_topics_keyboard():
+        builder = InlineKeyboardBuilder()
+        builder.add(
+            InlineKeyboardButton(text="🐍 Программирование (Python)", callback_data="quiz_prog"),
+            InlineKeyboardButton(text="∫ Математика", callback_data="quiz_math"),
+            InlineKeyboardButton(text="🧬 Биология", callback_data="quiz_biology"),
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_after_answer_keyboard():
+        builder = InlineKeyboardBuilder()
+        builder.add(
+            InlineKeyboardButton(text="🔄 Ещё вопрос", callback_data="quiz_more"),
+            InlineKeyboardButton(text="🔀 Сменить тему", callback_data="change_topic"),
+            InlineKeyboardButton(text="🏠Закончить", callback_data="end_quiz"),
+        )
+        builder.adjust(1)
         return builder.as_markup()
 
 

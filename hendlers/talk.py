@@ -32,10 +32,11 @@ async def handle_talk(message: Message):
     """
     # Отправляем изображение, связанное с командой talk
     await send_image(message, Config.IMAGE_PATHS["talk"])
+    answer_text = Config.get_messages('talk')
 
     # Отправляем сообщение с клавиатурой для выбора персонажа
     await message.answer(
-        "Выберите личность:",
+        answer_text,
         reply_markup=Keyboards.get_personalities_keyboard()
     )
 

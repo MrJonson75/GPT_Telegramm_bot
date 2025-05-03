@@ -185,4 +185,5 @@ async def end_quiz(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer(
         f"Квиз завершён! Твой итоговый счёт: {score}\n"
         "Напиши /quiz если захочешь сыграть ещё раз."
+        "/start для возврата в основное меню"
     )

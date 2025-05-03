@@ -16,7 +16,9 @@ class Keyboards:
         builder.button(text="🤖 /gpt - ChatGPT интерфейс")
         builder.button(text="👤 /talk - Диалог с личностью")
         builder.button(text="🧩 /quiz - Квиз")
-        builder.adjust(2, 2)  # 2 кнопки в первом ряду, 2 во втором
+        builder.button(text="🌐 /translate - Переводчик")
+        builder.button(text="🎙️ /voice - Голосовой ChatGPT")
+        builder.adjust(2)
         return builder.as_markup(resize_keyboard=True)
 
     @staticmethod
@@ -68,6 +70,22 @@ class Keyboards:
         )
         builder.adjust(1)
         return builder.as_markup()
+
+    @staticmethod
+    def get_languages_keyboard():
+        builder = InlineKeyboardBuilder()
+        for name, code in Config.LANGUAGES.items():
+            builder.button(text=name, callback_data=f"lang_{code}")
+        builder.adjust(2)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_translator_keyboard():
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🔀 Сменить язык", callback_data="change_lang")
+        builder.button(text="🏠 Закончить", callback_data="start")
+        return builder.as_markup()
+
 
 
 

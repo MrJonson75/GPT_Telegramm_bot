@@ -35,7 +35,20 @@ class Config:
         'hawking': f"{image_patch()}/talk_hawking.jpg",
         'nietzsche': f"{image_patch()}/talk_nietzsche.jpg",
         'queen': f"{image_patch()}/talk_queen.jpg",
-        'tolkien': f"{image_patch()}/talk_tolkien.jpg"
+        'tolkien': f"{image_patch()}/talk_tolkien.jpg",
+        'translate': f"{image_patch()}/translate.jpg",
+        'voice_gpt': f"{image_patch()}/voice_gpt.jpg",
+    }
+
+    LANGUAGES = {
+        "Английский": "english",
+        "Французский": "french",
+        "Немецкий": "german",
+        "Испанский": "spanish",
+        "Китайский": "chinese",
+        "Японский": "japanese",
+        "Русский": "russian",
+        "Корейский": "korean",
     }
 
     @staticmethod

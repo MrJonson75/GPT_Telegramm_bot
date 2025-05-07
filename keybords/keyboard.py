@@ -17,7 +17,7 @@ class Keyboards:
         builder.button(text="👤 /talk - Диалог с личностью")
         builder.button(text="🧩 /quiz - Квиз")
         builder.button(text="🌐 /translate - Переводчик")
-        builder.button(text="🎙️ /voice - Голосовой ChatGPT")
+        builder.button(text="🎙️ /voice - Голосовой чат")
         builder.adjust(2)
         return builder.as_markup(resize_keyboard=True)
 

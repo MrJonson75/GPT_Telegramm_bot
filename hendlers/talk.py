@@ -69,7 +69,7 @@ async def handle_person(callback: CallbackQuery):
     # Отправляем сообщение о начале диалога с кнопкой возврата
     await callback.message.answer(
         f"Вы говорите с {Config.PERSONS[person].upper()}. Отправьте сообщение:",
-        reply_markup=Keyboards.return_talk_keyboard()
+        reply_markup=Keyboards.get_talk_exit_keyboard(),
     )
 
     # Подтверждаем обработку callback
@@ -98,5 +98,5 @@ async def handle_talk_message(message: Message):
     # Отправляем ответ пользователю с клавиатурой для возврата
     await message.answer(
         response,
-        reply_markup=Keyboards.return_talk_keyboard(),
+        reply_markup=Keyboards.get_talk_exit_keyboard(),
     )

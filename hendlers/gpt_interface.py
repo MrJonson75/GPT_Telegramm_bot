@@ -81,7 +81,7 @@ async def handle_chatgpt_question(message: Message, state: FSMContext):
     response = await get_chatgpt_response(message.text)
     await message.answer(
         response,
-        reply_markup=Keyboards.return_gpt_keyboard(),  # Клавиатура с кнопкой "Закончить"
+        reply_markup=Keyboards.get_gpt_exit_keyboard(),  # Клавиатура с кнопкой "Закончить"
     )
 
 

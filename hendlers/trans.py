@@ -24,7 +24,7 @@ async def handle_language(callback: CallbackQuery):
     user_languages[callback.from_user.id] = language
     await callback.message.answer(
         f"Выбран язык: {language}. Отправьте текст для перевода:",
-        reply_markup=Keyboards.get_translator_keyboard()
+        reply_markup=Keyboards.get_translator_control_keyboard()
     )
     await callback.answer()
 
@@ -44,5 +44,17 @@ async def handle_translation(message: Message):
     translation = await get_chatgpt_response(prompt)
     await message.answer(
         f"Перевод ({language}):\n\n{translation}",
-        reply_markup=Keyboards.get_translator_keyboard()
+        reply_markup=Keyboards.get_translator_control_keyboard()
     )
+
+
+@trans_router.callback_query(F.data == "main_menu")
+async def return_to_main_menu(callback: CallbackQuery):
+    # Удаляем язык пользователя (если нужно)
+    user_id = callback.from_user.id
+    if user_id in user_languages:
+        del user_languages[user_id]
+
+    # Отправляем команду /start
+    await callback.message.answer("/start")
+    await callback.answer()

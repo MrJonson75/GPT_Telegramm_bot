@@ -65,7 +65,7 @@ async def cmd_quiz(message: Message, state: FSMContext):
     answer_text = Config.get_messages('quiz')
     await message.answer(
         answer_text,
-        reply_markup=Keyboards.get_topics_keyboard()  # Предлагаем выбрать тему
+        reply_markup=Keyboards.get_quiz_topics_keyboard()  # Предлагаем выбрать тему
     )
 
 
@@ -119,7 +119,7 @@ async def process_user_answer(message: types.Message, state: FSMContext):
     await message.answer(
         f"{result}\n\n"
         f"Твой счёт: {score}",
-        reply_markup=Keyboards.get_after_answer_keyboard()  # Предлагаем варианты действий
+        reply_markup=Keyboards.get_translator_control_keyboard()  # Предлагаем варианты действий
     )
 
 

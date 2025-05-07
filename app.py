@@ -37,6 +37,8 @@ if __name__ == '__main__':
     # Настройка логирования в файл bot_log.log с уровнем INFO
     # logging.basicConfig(filename='bot_log.log', level=logging.INFO)
 
+
+
     try:
         # Запуск основной асинхронной функции
         asyncio.run(main())

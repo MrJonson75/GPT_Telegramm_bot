@@ -1,117 +1,146 @@
-MyBot - Multifunctional Telegram Bot
-Python Version
-Aiogram Version
-License
+# Telegram Bot with AI Features
 
-MyBot is a feature-rich Telegram bot with multiple interactive functions powered by OpenAI's ChatGPT API.
+**Version**: 1.0.0  
+**Python Version**: 3.8+  
+**aiogram Version**: 3.3.0  
+**OpenAI SDK Version**: 1.3.0  
 
-📌 Table of Contents
-Features
+This project is a Telegram bot built using the `aiogram` library, integrating various AI-powered functionalities such as interacting with ChatGPT, quizzes, random facts, translations, voice processing, and dialogues with virtual personalities. The bot is designed to be modular, extensible, and user-friendly, with a focus on delivering engaging and interactive experiences.
 
-Installation
+## Features
 
-Configuration
+- **/start**: Displays the main menu with a welcome message and image.
+- **/gpt**: Initiates a conversation with ChatGPT, allowing users to ask questions and receive AI-generated responses.
+- **/quiz**: Starts an interactive quiz with topics like programming, math, and biology, tracking scores using a Finite State Machine (FSM).
+- **/random**: Provides random facts fetched via ChatGPT, with the option to request more.
+- **/talk**: Enables dialogues with virtual personalities (e.g., Kurt Cobain, Stephen Hawking) using custom prompts.
+- **/translate**: Translates user input into selected languages (e.g., English, French, Spanish).
+- **/voice**: Processes voice messages, converting them to text using OpenAI Whisper and responding with AI-generated voice output.
+- **Custom Keyboards**: Interactive inline keyboards for seamless navigation and user input.
+- **Rate Limiting**: Limits voice command usage to prevent abuse (e.g., 5 requests per minute per user).
+- **Error Handling**: Robust error handling for API calls, file operations, and Telegram interactions.
 
-Usage
+## Project Structure
 
-Project Structure
+```
+my_bot/
+├── app.py                 # Entry point for the bot
+├── config.py              # Configuration settings (API keys, file paths, etc.)
+├── misc.py                # Startup and shutdown handlers
+├── handlers/              # Command and callback handlers
+│   ├── command.py         # Handles /start command
+│   ├── random_fact.py     # Handles /random command for random facts
+│   ├── gpt_interface.py   # Handles /gpt command for ChatGPT interaction
+│   ├── talk.py            # Handles /talk command for virtual personality dialogues
+│   ├── quiz.py            # Handles /quiz command for interactive quizzes
+│   ├── trans.py           # Handles /translate command for text translation
+│   └── voice_gpt.py       # Handles /voice command for voice processing
+├── keyboards/             # Custom keyboard definitions
+│   └── keyboard.py        # Inline keyboard configurations
+├── resources/             # Static resources
+│   ├── images/            # Image files for bot responses
+│   ├── messages/          # Text message templates
+│   └── prompts/           # Prompt templates for ChatGPT
+└── utils/                 # Utility functions
+    ├── chatgpt.py         # OpenAI API wrapper for ChatGPT and quiz logic
+    ├── images.py          # Image sending utilities
+    └── voice.py           # Voice-to-text and text-to-voice processing
+```
 
-Contributing
+## Installation
 
-License
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/MrJonson75/GPT_Telegramm_bot.git
+   cd GPT_Telegramm_bot
+   ```
 
-✨ Features
-AI Chat: Conversation with ChatGPT (/gpt)
+2. **Set Up a Virtual Environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-Quiz Game: Interactive quizzes on various topics (/quiz)
+3. **Install Dependencies**:
+   Install the required Python packages listed in `requirements.txt`:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Random Facts: Interesting fact generator (/random)
+   **Example `requirements.txt`**:
+   ```
+   aiogram==3.3.0
+   openai==1.3.0
+   httpx==0.23.0
+   python-dotenv==1.0.0
+   ```
 
-Character Chat: Talk with historical/popular figures (/talk)
+4. **Install FFmpeg**:
+   FFmpeg is required for voice message processing. Install it on your system:
+   - **Ubuntu**:
+     ```bash
+     sudo apt update
+     sudo apt install ffmpeg
+     ```
+   - **Windows**: Download from [FFmpeg website](https://ffmpeg.org/download.html) and add to PATH.
+   - **macOS**:
+     ```bash
+     brew install ffmpeg
+     ```
 
-Translation: Multi-language text translation (/translate)
+5. **Configure Environment Variables**:
+   Create a `.env` file in the project root and add the following:
+   ```
+   TOKEN=your_telegram_bot_token
+   GPT_TOKEN=your_openai_api_key
+   PROXY=your_proxy_url  # Optional, e.g., http://proxy:port
+   ```
 
-Voice Interaction: Voice message processing (/voice)
+   - Obtain `TOKEN` from [BotFather](https://t.me/BotFather) on Telegram.
+   - Obtain `GPT_TOKEN` from [OpenAI](https://platform.openai.com/account/api-keys).
 
-🛠 Installation
-Clone the repository:
+6. **Prepare Resources**:
+   - Place images in `resources/images/`.
+   - Add message templates in `resources/messages/` (e.g., `main.txt`, `gpt.txt`).
+   - Add prompt templates in `resources/prompts/` (e.g., `random.txt`, `talk_cobain.txt`).
 
-bash
-git clone https://github.com/MrJonson75/GPT_Telegramm_bot.git
-cd mybot
-Install dependencies:
+7. **Run the Bot**:
+   ```bash
+   python app.py
+   ```
 
-bash
-pip install -r requirements.txt
-Install FFmpeg (for voice processing):
+## Usage
 
-bash
-# On Ubuntu/Debian
-sudo apt install ffmpeg
+1. Start the bot by sending `/start` in Telegram.
+2. Use commands like `/gpt`, `/quiz`, `/random`, `/talk`, `/translate`, or `/voice` to interact with the bot.
+3. Follow the inline keyboard prompts to navigate features or select options (e.g., quiz topics, languages, or personalities).
+4. For voice interactions, send a voice message after using the `/voice` command (max 30 seconds).
 
-# On MacOS
-brew install ffmpeg
-⚙ Configuration
-Create .env file:
+## Development Notes
 
-bash
-cp .env.example .env
-Edit .env with your credentials:
+- **Modularity**: Each feature is implemented in a separate handler module for easy maintenance and extension.
+- **Finite State Machine (FSM)**: Used in `gpt_interface.py`, `quiz.py`, and `trans.py` to manage conversation states.
+- **Rate Limiting**: Implemented in `voice_gpt.py` to prevent API abuse.
+- **Error Handling**: Comprehensive error handling in API calls (`chatgpt.py`, `voice.py`) and file operations (`images.py`).
+- **Proxy Support**: Configurable proxy for OpenAI API requests in `chatgpt.py` and `voice.py`.
+- **Logging**: Basic logging setup in `app.py` (commented out, can be enabled).
 
-ini
-TOKEN=your_telegram_bot_token
-GPT_TOKEN=your_openai_api_key
-PROXY=your_proxy_server_if_needed  # Optional
-🚀 Usage
-Start the bot:
+## Contributing
 
-bash
-python app.py
-Available Commands:
-Command	Description
-/start	Show main menu
-/gpt	Chat with AI
-/quiz	Start quiz game
-/random	Get random fact
-/talk	Talk with characters
-/translate	Translate text
-/voice	Voice interaction
-📂 Project Structure
-mybot/
-├── .env.example            # Environment template
-├── app.py                  # Main entry point
-├── config.py               # Configuration handler
-├── misc.py                 # Startup/shutdown handlers
-├── handlers/               # Command handlers
-│   ├── command.py          # /start command
-│   ├── random_fact.py      # Random facts
-│   ├── gpt_interface.py    # ChatGPT interface
-│   ├── talk.py             # Character chats
-│   ├── quiz.py             # Quiz game
-│   ├── trans.py            # Translation
-│   └── voice_gpt.py        # Voice processing
-├── keyboards/              # Bot keyboards
-│   └── keyboard.py         # Shared keyboards
-├── resources/              # Resource files
-│   ├── images/             # Image assets
-│   ├── messages/           # Text messages
-│   └── prompts/            # AI prompts
-└── utils/                  # Utilities
-    ├── chatgpt.py          # OpenAI wrapper
-    ├── images.py           # Image handling
-    └── voice.py            # Voice utilities
-🤝 Contributing
-Contributions are welcome! Please follow these steps:
+Contributions are welcome! To contribute:
 
-Fork the repository
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/your-feature`).
+3. Commit your changes (`git commit -m "Add your feature"`).
+4. Push to the branch (`git push origin feature/your-feature`).
+5. Open a pull request.
 
-Create your feature branch (git checkout -b feature/AmazingFeature)
+Please ensure your code follows the existing style and includes appropriate tests.
 
-Commit your changes (git commit -m 'Add some AmazingFeature')
+## License
 
-Push to the branch (git push origin feature/AmazingFeature)
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-Open a Pull Request
+## Contact
 
-📜 License
-Distributed under the MIT License. See LICENSE for more information.
+For questions or feedback, open an issue on GitHub or contact the maintainer at [your-email@example.com].

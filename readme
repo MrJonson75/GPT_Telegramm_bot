@@ -37,7 +37,7 @@ Voice Interaction: Voice message processing (/voice)
 Clone the repository:
 
 bash
-git clone https://github.com/yourusername/mybot.git
+git clone https://github.com/MrJonson75/GPT_Telegramm_bot.git
 cd mybot
 Install dependencies:
 

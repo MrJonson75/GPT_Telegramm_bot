@@ -13,7 +13,7 @@ import logging
 from typing import Optional, Dict
 from datetime import datetime, timedelta
 from aiogram import Router, F
-from aiogram.types import Message, Voice
+from aiogram.types import Message, Voice, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramAPIError
@@ -316,18 +316,41 @@ async def handle_voice_message(message: Message, state: FSMContext) -> None:
             reply_markup=Keyboards.get_voice_control_keyboard()
         )
 
-@voice_router.message(F.data == CallbackData.END_VOICE)
-async def return_to_main_menu(message: Message, state: FSMContext):
+@voice_router.callback_query(F.data == CallbackData.END_VOICE)
+async def return_to_main_menu(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик для возврата в главное меню.
 
     Args:
-        message: Объект сообщения от пользователя
+        callback: Объект callback-запроса от кнопки
         state: Контекст состояния FSM
     """
-    logger.debug(f"Пользователь {message.from_user.id} вернулся в главное меню")
+    logger.debug(f"Пользователь {callback.from_user.id} вернулся в главное меню")
     await state.clear()
-    await message.answer(
+    await callback.message.answer(
         "Голосовой интерфейс завершён. Начните заново с /voice или /start.",
         reply_markup=Keyboards.main_menu()
     )
+    await callback.answer()
+
+@voice_router.callback_query()
+async def catch_all_callbacks(callback: CallbackQuery, state: FSMContext):
+    """
+    Универсальный хендлер для необработанных callback-запросов.
+
+    Args:
+        callback: Объект callback-запроса от кнопки
+        state: Текущее состояние FSM
+    """
+    current_state = await state.get_state()
+    logger.warning(
+        f"Необработанный callback в voice_gpt: user={callback.from_user.id}, "
+        f"data={callback.data}, state={current_state}"
+    )
+    await callback.message.answer(
+        "Этот запрос не поддерживается. Попробуйте начать заново /start.",
+        reply_markup=Keyboards.main_menu()
+    )
+    await state.clear()
+    logger.debug(f"Сброшено состояние для user_id={callback.from_user.id}")
+    await callback.answer()

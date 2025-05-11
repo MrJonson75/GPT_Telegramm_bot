@@ -5,9 +5,8 @@ import logging
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from config import Config
-from utils.images import send_image
 from utils.chatgpt import get_quiz_question, check_answer
 from keybords import Keyboards, CallbackData
 
@@ -21,14 +20,14 @@ class QuizStates(StatesGroup):
     Состояния:
     - selecting_topic: состояние выбора темы квиза
     - answering_question: состояние ответа на вопрос квиза
+    - waiting_for_action: состояние ожидания действия после ответа
     """
     selecting_topic = State()
     answering_question = State()
+    waiting_for_action = State()
 
 # Создаем роутер для обработки команд и сообщений, связанных с квизом
 quiz_router = Router()
-
-
 
 @quiz_router.message(F.text.lower().contains("quiz"))
 async def cmd_quiz(message: Message, state: FSMContext):
@@ -36,7 +35,7 @@ async def cmd_quiz(message: Message, state: FSMContext):
     Обработчик команды начала квиза.
 
     Активируется, когда пользователь отправляет сообщение, содержащее "quiz".
-    Устанавливает начальное состояние и счёт, отправляет изображение и приветственное сообщение.
+    Устанавливает начальное состояние и счёт, отправляет изображение с текстом и клавиатурой.
 
     Args:
         message: Объект сообщения от пользователя
@@ -48,23 +47,47 @@ async def cmd_quiz(message: Message, state: FSMContext):
     logger.debug(f"Установлено состояние QuizStates.selecting_topic для пользователя {message.from_user.id}")
     await state.update_data(score=0)  # Инициализируем счёт
 
-    # Отправляем изображение из пути, указанного в конфиге
-    try:
-        await send_image(message, Config.IMAGE_PATHS["quiz"])
-    except KeyError:
-        logger.warning("Изображение для команды 'quiz' не найдено")
-
+    # Подготовка текста
     answer_text = Config.get_messages('quiz') or "Выберите тему квиза:"
+    # Обрезаем подпись, если она слишком длинная
+    if len(answer_text) > 1024:
+        answer_text = answer_text[:1020] + "..."
+        logger.warning(f"Подпись для команды 'quiz' обрезана до 1024 символов: {answer_text}")
+
     keyboard = Keyboards.get_quiz_topics_keyboard()
     if keyboard is None:
         logger.warning("Клавиатура тем квиза не создана")
         await message.answer("Темы квиза не настроены. Обратитесь к администратору.")
         return
 
-    await message.answer(
-        answer_text,
-        reply_markup=keyboard
-    )
+    # Отправляем изображение с текстом и клавиатурой
+    try:
+        image_path = Config.IMAGE_PATHS["quiz"]
+        photo = FSInputFile(path=image_path)
+        await message.answer_photo(
+            photo=photo,
+            caption=answer_text,
+            reply_markup=keyboard
+        )
+        logger.debug(f"Отправлено изображение {image_path} с подписью для user_id={message.from_user.id}")
+    except KeyError:
+        logger.warning("Изображение для команды 'quiz' не найдено")
+        await message.answer(
+            answer_text,
+            reply_markup=keyboard
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await message.answer(
+            answer_text,
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await message.answer(
+            "Произошла ошибка. Попробуйте снова.",
+            reply_markup=keyboard
+        )
 
 @quiz_router.callback_query(F.data.in_([f"{CallbackData.QUIZ_PREFIX.value}{topic}" for topic in ["prog", "math", "biology"]]))
 async def process_topic_selection(callback: CallbackQuery, state: FSMContext):
@@ -72,7 +95,7 @@ async def process_topic_selection(callback: CallbackQuery, state: FSMContext):
     Обработчик выбора темы квиза с клавиатуры get_quiz_topics_keyboard.
 
     Получает вопрос по выбранной теме, сохраняет тему и вопрос в состоянии FSM,
-    и переводит пользователя в состояние ответа на вопрос.
+    и отправляет изображение с вопросом.
 
     Args:
         callback: Объект callback от нажатия кнопки
@@ -119,8 +142,32 @@ async def process_topic_selection(callback: CallbackQuery, state: FSMContext):
     )
     logger.debug(f"Сохранены данные: current_topic={topic}, current_question={question}")
 
-    # Отправляем вопрос пользователю
-    await callback.message.answer(f"Вопрос: {question}\n\nНапиши свой ответ:")
+    # Подготовка текста
+    answer_text = f"Вопрос: {question}\n\nНапиши свой ответ:"
+    # Обрезаем подпись, если она слишком длинная
+    if len(answer_text) > 1024:
+        answer_text = answer_text[:1020] + "..."
+        logger.warning(f"Подпись для вопроса темы '{topic}' обрезана до 1024 символов: {answer_text}")
+
+    # Отправляем изображение темы с вопросом
+    try:
+        image_path = Config.IMAGE_PATHS.get(topic, Config.IMAGE_PATHS["quiz"])  # Используем тему или quiz по умолчанию
+        photo = FSInputFile(path=image_path)
+        await callback.message.answer_photo(
+            photo=photo,
+            caption=answer_text
+        )
+        logger.debug(f"Отправлено изображение {image_path} с вопросом для user_id={callback.from_user.id}")
+    except KeyError:
+        logger.warning(f"Изображение для темы '{topic}' или 'quiz' не найдено")
+        await callback.message.answer(answer_text)
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await callback.message.answer(answer_text)
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await callback.message.answer("Произошла ошибка. Попробуйте снова.")
+
     await callback.answer()
 
 @quiz_router.message(QuizStates.answering_question)
@@ -128,7 +175,7 @@ async def process_user_answer(message: Message, state: FSMContext):
     """
     Обработчик ответа пользователя на вопрос квиза.
 
-    Проверяет ответ, обновляет счёт и показывает результат.
+    Проверяет ответ, обновляет счёт, отправляет изображение с результатом и переходит в ожидание действия.
 
     Args:
         message: Объект сообщения с ответом пользователя
@@ -136,6 +183,7 @@ async def process_user_answer(message: Message, state: FSMContext):
     """
     user_data = await state.get_data()
     question = user_data.get('current_question')
+    topic = user_data.get('current_topic')
     user_answer = message.text
     logger.debug(f"Пользователь {message.from_user.id} ответил: {user_answer} на вопрос: {question}")
 
@@ -154,17 +202,68 @@ async def process_user_answer(message: Message, state: FSMContext):
     await state.update_data(score=score)
     logger.debug(f"Обновлен счёт: {score}, данные состояния: {await state.get_data()}")
 
+    # Подготовка текста
+    answer_text = f"{result}\n\nТвой счёт: {score}"
+    # Обрезаем подпись, если она слишком длинная
+    if len(answer_text) > 1024:
+        answer_text = answer_text[:1020] + "..."
+        logger.warning(f"Подпись для результата ответа обрезана до 1024 символов: {answer_text}")
+
+    # Отправляем изображение темы с результатом и клавиатурой
+    try:
+        image_path = Config.IMAGE_PATHS.get(topic, Config.IMAGE_PATHS["quiz"])  # Используем тему или quiz по умолчанию
+        photo = FSInputFile(path=image_path)
+        await message.answer_photo(
+            photo=photo,
+            caption=answer_text,
+            reply_markup=Keyboards.get_quiz_control_keyboard()
+        )
+        logger.debug(f"Отправлено изображение {image_path} с результатом для user_id={message.from_user.id}")
+    except KeyError:
+        logger.warning(f"Изображение для темы '{topic}' или 'quiz' не найдено")
+        await message.answer(
+            answer_text,
+            reply_markup=Keyboards.get_quiz_control_keyboard()
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await message.answer(
+            answer_text,
+            reply_markup=Keyboards.get_quiz_control_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await message.answer(
+            "Произошла ошибка. Попробуйте снова.",
+            reply_markup=Keyboards.get_quiz_control_keyboard()
+        )
+
+    # Переходим в состояние ожидания действия
+    await state.set_state(QuizStates.waiting_for_action)
+    logger.debug(f"Установлено состояние QuizStates.waiting_for_action для пользователя {message.from_user.id}")
+
+@quiz_router.message(QuizStates.waiting_for_action)
+async def handle_invalid_message(message: Message):
+    """
+    Обработчик текстовых сообщений в состоянии ожидания действия.
+
+    Уведомляет пользователя, что нужно выбрать действие через клавиатуру.
+
+    Args:
+        message: Объект сообщения от пользователя
+    """
+    logger.debug(f"Пользователь {message.from_user.id} отправил текстовое сообщение в состоянии waiting_for_action: {message.text}")
     await message.answer(
-        f"{result}\n\nТвой счёт: {score}",
+        "Пожалуйста, выберите действие с помощью кнопок: 'Следующий вопрос', 'Сменить тему' или 'Завершить квиз'.",
         reply_markup=Keyboards.get_quiz_control_keyboard()
     )
 
-@quiz_router.callback_query(QuizStates.answering_question, F.data == CallbackData.QUIZ_MORE.value)
+@quiz_router.callback_query(QuizStates.waiting_for_action, F.data == CallbackData.QUIZ_MORE.value)
 async def next_question(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик запроса следующего вопроса в текущей теме.
 
-    Получает новый вопрос (исключая повтор предыдущего) и продолжает квиз.
+    Получает новый вопрос (исключая повтор предыдущего) и отправляет изображение с вопросом.
 
     Args:
         callback: Объект callback от нажатия кнопки
@@ -208,15 +307,43 @@ async def next_question(callback: CallbackQuery, state: FSMContext):
     )
     logger.debug(f"Сохранены данные: current_question={question}")
 
-    await callback.message.answer(f"Вопрос: {question}\n\nНапиши свой ответ:")
+    # Подготовка текста
+    answer_text = f"Вопрос: {question}\n\nНапиши свой ответ:"
+    # Обрезаем подпись, если она слишком длинная
+    if len(answer_text) > 1024:
+        answer_text = answer_text[:1020] + "..."
+        logger.warning(f"Подпись для нового вопроса темы '{topic}' обрезана до 1024 символов: {answer_text}")
+
+    # Отправляем изображение темы с вопросом
+    try:
+        image_path = Config.IMAGE_PATHS.get(topic, Config.IMAGE_PATHS["quiz"])  # Используем тему или quiz по умолчанию
+        photo = FSInputFile(path=image_path)
+        await callback.message.answer_photo(
+            photo=photo,
+            caption=answer_text
+        )
+        logger.debug(f"Отправлено изображение {image_path} с вопросом для user_id={callback.from_user.id}")
+    except KeyError:
+        logger.warning(f"Изображение для темы '{topic}' или 'quiz' не найдено")
+        await callback.message.answer(answer_text)
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await callback.message.answer(answer_text)
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await callback.message.answer("Произошла ошибка. Попробуйте снова.")
+
+    # Переходим в состояние ответа на вопрос
+    await state.set_state(QuizStates.answering_question)
+    logger.debug(f"Установлено состояние QuizStates.answering_question для пользователя {callback.from_user.id}")
     await callback.answer()
 
-@quiz_router.callback_query(QuizStates.answering_question, F.data == CallbackData.CHANGE_TOPIC.value)
+@quiz_router.callback_query(QuizStates.waiting_for_action, F.data == CallbackData.CHANGE_TOPIC.value)
 async def change_topic(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик смены темы квиза.
 
-    Возвращает пользователя в состояние выбора темы.
+    Отправляет изображение с предложением выбрать новую тему.
 
     Args:
         callback: Объект callback от нажатия кнопки
@@ -224,18 +351,51 @@ async def change_topic(callback: CallbackQuery, state: FSMContext):
     """
     logger.debug(f"Пользователь {callback.from_user.id} запросил смену темы")
     await state.set_state(QuizStates.selecting_topic)
-    await callback.message.answer(
-        "Выбери новую тему:",
-        reply_markup=Keyboards.get_quiz_topics_keyboard()
-    )
+
+    # Подготовка текста
+    answer_text = "Выбери новую тему:"
+    # Обрезаем подпись, если она слишком длинная
+    if len(answer_text) > 1024:
+        answer_text = answer_text[:1020] + "..."
+        logger.warning(f"Подпись для смены темы обрезана до 1024 символов: {answer_text}")
+
+    # Отправляем изображение с текстом и клавиатурой
+    try:
+        image_path = Config.IMAGE_PATHS["quiz"]
+        photo = FSInputFile(path=image_path)
+        await callback.message.answer_photo(
+            photo=photo,
+            caption=answer_text,
+            reply_markup=Keyboards.get_quiz_topics_keyboard()
+        )
+        logger.debug(f"Отправлено изображение {image_path} с подписью для user_id={callback.from_user.id}")
+    except KeyError:
+        logger.warning("Изображение для команды 'quiz' не найдено")
+        await callback.message.answer(
+            answer_text,
+            reply_markup=Keyboards.get_quiz_topics_keyboard()
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await callback.message.answer(
+            answer_text,
+            reply_markup=Keyboards.get_quiz_topics_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await callback.message.answer(
+            "Произошла ошибка. Попробуйте снова.",
+            reply_markup=Keyboards.get_quiz_topics_keyboard()
+        )
+
     await callback.answer()
 
-@quiz_router.callback_query(QuizStates.answering_question, F.data == CallbackData.END_QUIZ.value)
+@quiz_router.callback_query(QuizStates.waiting_for_action, F.data == CallbackData.END_QUIZ.value)
 async def end_quiz(callback: CallbackQuery, state: FSMContext):
     """
     Обработчик завершения квиза.
 
-    Показывает итоговый счёт и очищает состояние.
+    Отправляет изображение с итоговым счётом и очищает состояние.
 
     Args:
         callback: Объект callback от нажатия кнопки
@@ -245,12 +405,41 @@ async def end_quiz(callback: CallbackQuery, state: FSMContext):
     score = user_data.get('score', 0)
     logger.debug(f"Пользователь {callback.from_user.id} завершил квиз с результатом {score}")
 
-    await state.clear()  # Очищаем состояние
-    await callback.message.answer(
-        f"Квиз завершён! Твой итоговый счёт: {score}\n"
-        "Напиши /quiz, если захочешь сыграть ещё раз.\n"
-        "/start для возврата в основное меню",
-        reply_markup=Keyboards.main_menu()
-    )
-    await callback.answer()
+    # Подготовка текста
+    answer_text = f"Квиз завершён! Твой итоговый счёт: {score}\nНапиши /quiz, если захочешь сыграть ещё раз.\n/start для возврата в основное меню"
+    # Обрезаем подпись, если она слишком длинная
+    if len(answer_text) > 1024:
+        answer_text = answer_text[:1020] + "..."
+        logger.warning(f"Подпись для завершения квиза обрезана до 1024 символов: {answer_text}")
 
+    # Отправляем изображение с текстом и главным меню
+    try:
+        image_path = Config.IMAGE_PATHS["main"]
+        photo = FSInputFile(path=image_path)
+        await callback.message.answer_photo(
+            photo=photo,
+            caption=answer_text,
+            reply_markup=Keyboards.main_menu()
+        )
+        logger.debug(f"Отправлено изображение {image_path} с подписью для user_id={callback.from_user.id}")
+    except KeyError:
+        logger.warning("Изображение для команды 'main' не найдено")
+        await callback.message.answer(
+            answer_text,
+            reply_markup=Keyboards.main_menu()
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await callback.message.answer(
+            answer_text,
+            reply_markup=Keyboards.main_menu()
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await callback.message.answer(
+            "Произошла ошибка. Попробуйте позже.",
+            reply_markup=Keyboards.main_menu()
+        )
+
+    await state.clear()  # Очищаем состояние
+    await callback.answer()

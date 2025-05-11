@@ -253,9 +253,6 @@ class Keyboards:
             text="Попробовать снова",
             callback_data="retry_voice"
         )
-        builder.button(
-            text="Завершить",
-            callback_data=CallbackData.END_VOICE
-        )
+        builder.add(Keyboards._get_exit_button(CallbackData.END_VOICE.value))
         builder.adjust(2)
         return builder.as_markup()

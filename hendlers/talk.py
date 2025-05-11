@@ -185,18 +185,3 @@ async def handle_talk_exit(callback: CallbackQuery):
     # Подтверждаем обработку callback
     await callback.answer()
 
-@talk_router.callback_query()
-async def catch_all_callbacks(callback: CallbackQuery):
-    """
-    Универсальный хендлер для необработанных callback-запросов.
-
-    Логирует необработанные callback и уведомляет пользователя.
-
-    Args:
-        callback: Объект callback от нажатия кнопки
-    """
-    logger.warning(
-        f"Необработанный callback: user={callback.from_user.id}, "
-        f"data={callback.data}"
-    )
-    await callback.answer("Этот запрос не поддерживается.", show_alert=True)

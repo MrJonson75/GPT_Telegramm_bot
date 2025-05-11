@@ -20,6 +20,7 @@ class CallbackData(str, Enum):
     END_QUIZ = "end_quiz"
     END_TALK = "end_talk"
     END_TRANS = "end_trans"
+    END_VOICE = "end_voice"
     LANG_PREFIX = "lang_"
     CHANGE_LANG = "change_lang"
     MAIN_MENU = "main_menu"
@@ -243,4 +244,18 @@ class Keyboards:
         )
         builder.add(Keyboards._get_exit_button(CallbackData.END_TRANS))
         builder.adjust(columns)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_voice_control_keyboard() -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(
+            text="Попробовать снова",
+            callback_data="retry_voice"
+        )
+        builder.button(
+            text="Завершить",
+            callback_data=CallbackData.END_VOICE
+        )
+        builder.adjust(2)
         return builder.as_markup()

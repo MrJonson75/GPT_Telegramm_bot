@@ -91,6 +91,7 @@ async def handle_language(callback: CallbackQuery, state: FSMContext):
     """
     logger.debug(f"Callback data: {callback.data}")
     language = callback.data[len(CallbackData.LANG_PREFIX):]
+    out_language = ''.join([key for key, value in Config.LANGUAGES.items() if str(value) == language])
     available_languages = [str(lang) for lang in Config.LANGUAGES.values()]
     logger.debug(f"Проверка языка: {language}, доступные языки: {available_languages}")
     if language not in available_languages:
@@ -105,7 +106,8 @@ async def handle_language(callback: CallbackQuery, state: FSMContext):
     logger.debug(f"Пользователь {callback.from_user.id} выбрал язык: {language}")
     await state.update_data(selected_language=language)
     await callback.message.answer(
-        f"Выбран язык: {language}. Отправьте текст для перевода:",
+        f"Выбран язык: {out_language}. "
+        f"Отправьте текст для перевода:",
         reply_markup=Keyboards.get_translator_control_keyboard()
     )
     await state.set_state(TranslateState.translating)

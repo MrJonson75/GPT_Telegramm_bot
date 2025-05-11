@@ -12,11 +12,11 @@ from .voice_gpt import voice_router
 all_handlers = Router()
 all_handlers.include_routers(
     comm_router,
+    trans_router,
     rand_router,
     gpt_router,
-    talk_router,
-    trans_router,
     quiz_router,
+    talk_router,
     voice_router,
 
 )

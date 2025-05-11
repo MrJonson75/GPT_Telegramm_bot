@@ -1,10 +1,15 @@
-from aiogram.types import InlineKeyboardButton
+import logging
+from enum import Enum
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from config import Config
 
+# Настройка логирования
+logger = logging.getLogger(__name__)
 
-class CallbackData:
-    """Константы для callback_data."""
+class CallbackData(str, Enum):
+    """Перечисление для callback_data, используемых в клавиатурах."""
     RANDOM = "random"
     START = "start"
     BREAK = "break"
@@ -13,157 +18,229 @@ class CallbackData:
     QUIZ_MORE = "quiz_more"
     CHANGE_TOPIC = "change_topic"
     END_QUIZ = "end_quiz"
+    END_TALK = "end_talk"
+    END_TRANS = "end_trans"
     LANG_PREFIX = "lang_"
     CHANGE_LANG = "change_lang"
     MAIN_MENU = "main_menu"
 
-
 class Keyboards:
     """
-    Класс для создания inline и reply-клавиатур бота.
-    Все методы возвращают объекты клавиатур, готовые к использованию.
+    Класс для создания inline и reply-клавиатур Telegram-бота.
+
+    Все методы возвращают готовые объекты клавиатур для использования в обработчиках.
     """
 
+    # Тексты кнопок для повторного использования
+    BUTTON_TEXTS = {
+        "random_more": "🔁 Хочу ещё факт",
+        "exit": "🏠 Закончить",
+        "quiz_more": "🔄 Ещё вопрос",
+        "change_topic": "🔀 Сменить тему",
+        "change_lang": "🔀 Сменить язык",
+    }
+
     @staticmethod
-    def main_menu() -> ReplyKeyboardBuilder:
+    def _get_exit_button(callback_data: str = CallbackData.MAIN_MENU) -> InlineKeyboardButton:
+        """Создает кнопку 'Закончить' с заданным callback_data."""
+        return InlineKeyboardButton(
+            text=Keyboards.BUTTON_TEXTS["exit"],
+            callback_data=callback_data
+        )
+
+    @staticmethod
+    def main_menu(columns: int = 2) -> ReplyKeyboardMarkup:
         """
         Создает главное меню бота с основными командами.
 
+        Args:
+            columns: Количество столбцов для кнопок (по умолчанию 2).
+
         Returns:
-            ReplyKeyboardBuilder: Клавиатура с кнопками основных функций бота
+            ReplyKeyboardBuilder: Клавиатура с кнопками основных функций бота.
         """
+        logger.debug("Создание главного меню")
         builder = ReplyKeyboardBuilder()
-        builder.button(text="🎲 /random - Случайный факт")
-        builder.button(text="🤖 /gpt - ChatGPT интерфейс")
-        builder.button(text="👤 /talk - Диалог с личностью")
-        builder.button(text="🧩 /quiz - Квиз")
-        builder.button(text="🌐 /translate - Переводчик")
-        builder.button(text="🎙️ /voice - Голосовой чат")
-        builder.adjust(2)
+        buttons = [
+            "🎲 /random - Случайный факт",
+            "🤖 /gpt - ChatGPT интерфейс",
+            "👤 /talk - Диалог с личностью",
+            "🧩 /quiz - Квиз",
+            "🌐 /translate - Переводчик",
+            "🎙️ /voice - Голосовой чат",
+        ]
+        for text in buttons:
+            builder.button(text=text)
+        builder.adjust(columns)
         return builder.as_markup(resize_keyboard=True)
 
     @staticmethod
-    def get_random_fact_keyboard() -> InlineKeyboardBuilder:
+    def get_random_fact_keyboard() -> InlineKeyboardMarkup:
         """
         Создает inline-клавиатуру для режима случайных фактов.
 
         Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопками "Еще факт" и "Закончить"
+            InlineKeyboardBuilder: Клавиатура с кнопками "Ещё факт" и "Закончить".
         """
+        logger.debug("Создание клавиатуры для случайных фактов")
         builder = InlineKeyboardBuilder()
-        builder.button(text="🔁 Хочу ещё факт", callback_data=CallbackData.RANDOM)
-        builder.button(text="🏠 Закончить", callback_data=CallbackData.START)
+        builder.button(
+            text=Keyboards.BUTTON_TEXTS["random_more"],
+            callback_data=CallbackData.RANDOM
+        )
+        builder.add(Keyboards._get_exit_button())
         return builder.as_markup()
 
     @staticmethod
-    def get_gpt_exit_keyboard() -> InlineKeyboardBuilder:
+    def get_gpt_exit_keyboard() -> InlineKeyboardMarkup:
         """
         Создает inline-клавиатуру для выхода из режима GPT.
 
         Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопкой "Закончить"
+            InlineKeyboardBuilder: Клавиатура с кнопкой "Закончить".
         """
+        logger.debug("Создание клавиатуры выхода из режима GPT")
         builder = InlineKeyboardBuilder()
-        builder.button(text="🏠 Закончить", callback_data=CallbackData.BREAK)
+        builder.add(Keyboards._get_exit_button(CallbackData.BREAK))
         return builder.as_markup()
 
     @staticmethod
-    def get_personalities_keyboard() -> InlineKeyboardBuilder:
+    def get_personalities_keyboard(columns: int = 1) -> InlineKeyboardMarkup | None:
         """
         Создает inline-клавиатуру с выбором личностей для диалога.
 
-        Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопками личностей
+        Args:
+            columns: Количество столбцов для кнопок (по умолчанию 1).
 
-        Raises:
-            ValueError: Если в Config.PERSONS нет данных
+        Returns:
+            InlineKeyboardBuilder: Клавиатура с кнопками личностей, или None, если личности не настроены.
+
+        Notes:
+            Если Config.PERSONS пуст, логируется предупреждение, и возвращается None.
         """
         if not Config.PERSONS:
-            raise ValueError("No personalities configured in Config.PERSONS")
+            logger.warning("Config.PERSONS пуст, клавиатура личностей не создана")
+            return None
 
+        logger.debug("Создание клавиатуры выбора личностей")
         builder = InlineKeyboardBuilder()
         for person_id, person_name in Config.PERSONS.items():
+            callback_data = f"{CallbackData.TALK_PREFIX.value}{person_id.value}"
+            logger.debug(f"Добавлена кнопка личности: текст={person_name.upper()}, callback_data={callback_data}")
             builder.button(
                 text=person_name.upper(),
-                callback_data=f"{CallbackData.TALK_PREFIX}{person_id}"
+                callback_data=callback_data
             )
-        builder.adjust(1)
+        builder.adjust(columns)
         return builder.as_markup()
 
     @staticmethod
-    def get_talk_exit_keyboard():
+    def get_talk_exit_keyboard() -> InlineKeyboardMarkup:
         """
         Создает inline-клавиатуру для выхода из режима диалога.
 
         Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопкой "Закончить"
+            InlineKeyboardBuilder: Клавиатура с кнопкой "Закончить".
         """
+        logger.debug("Создание клавиатуры выхода из режима диалога")
         builder = InlineKeyboardBuilder()
-        builder.button(text="🏠 Закончить", callback_data=CallbackData.START)
+        builder.add(Keyboards._get_exit_button(CallbackData.END_TALK))
         return builder.as_markup()
 
     @staticmethod
-    def get_quiz_topics_keyboard() -> InlineKeyboardBuilder:
+    def get_quiz_topics_keyboard(columns: int = 1) -> InlineKeyboardMarkup:
         """
         Создает inline-клавиатуру с выбором тем для квиза.
 
+        Args:
+            columns: Количество столбцов для кнопок (по умолчанию 1).
+
         Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопками тем
+            InlineKeyboardBuilder: Клавиатура с кнопками тем.
         """
+        logger.debug("Создание клавиатуры выбора тем квиза")
         builder = InlineKeyboardBuilder()
-        builder.button(text="🐍 Программирование (Python)", callback_data=f"{CallbackData.QUIZ_PREFIX}prog")
-        builder.button(text="∫ Математика", callback_data=f"{CallbackData.QUIZ_PREFIX}math")
-        builder.button(text="🧬 Биология", callback_data=f"{CallbackData.QUIZ_PREFIX}biology")
-        builder.adjust(1)
+        topics = [
+            ("🐍 Программирование (Python)", f"{CallbackData.QUIZ_PREFIX.value}prog"),
+            ("∫ Математика", f"{CallbackData.QUIZ_PREFIX.value}math"),
+            ("🧬 Биология", f"{CallbackData.QUIZ_PREFIX.value}biology"),
+        ]
+        for text, callback_data in topics:
+            logger.debug(f"Добавлена кнопка: текст={text}, callback_data={callback_data}")
+            builder.button(text=text, callback_data=callback_data)
+        builder.adjust(columns)
         return builder.as_markup()
 
     @staticmethod
-    def get_quiz_control_keyboard() -> InlineKeyboardBuilder:
+    def get_quiz_control_keyboard(columns: int = 1) -> InlineKeyboardMarkup:
         """
         Создает inline-клавиатуру для управления квизом после ответа.
 
+        Args:
+            columns: Количество столбцов для кнопок (по умолчанию 1).
+
         Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопками управления квизом
+            InlineKeyboardBuilder: Клавиатура с кнопками управления квизом.
         """
+        logger.debug("Создание клавиатуры управления квизом")
         builder = InlineKeyboardBuilder()
-        builder.button(text="🔄 Ещё вопрос", callback_data=CallbackData.QUIZ_MORE)
-        builder.button(text="🔀 Сменить тему", callback_data=CallbackData.CHANGE_TOPIC)
-        builder.button(text="🏠 Закончить", callback_data=CallbackData.END_QUIZ)
-        builder.adjust(1)
+        builder.button(
+            text=Keyboards.BUTTON_TEXTS["quiz_more"],
+            callback_data=CallbackData.QUIZ_MORE
+        )
+        builder.button(
+            text=Keyboards.BUTTON_TEXTS["change_topic"],
+            callback_data=CallbackData.CHANGE_TOPIC
+        )
+        builder.add(Keyboards._get_exit_button(CallbackData.END_QUIZ))
+        builder.adjust(columns)
         return builder.as_markup()
 
     @staticmethod
-    def get_languages_keyboard() -> InlineKeyboardBuilder:
+    def get_languages_keyboard(columns: int = 2) -> InlineKeyboardMarkup | None:
         """
         Создает inline-клавиатуру с выбором языков для перевода.
 
-        Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопками языков
+        Args:
+            columns: Количество столбцов для кнопок (по умолчанию 2).
 
-        Raises:
-            ValueError: Если в Config.LANGUAGES нет данных
+        Returns:
+            InlineKeyboardBuilder: Клавиатура с кнопками языков, или None, если языки не настроены.
+
+        Notes:
+            Если Config.LANGUAGES пуст, логируется предупреждение, и возвращается None.
         """
         if not Config.LANGUAGES:
-            raise ValueError("No languages configured in Config.LANGUAGES")
+            logger.warning("Config.LANGUAGES пуст, клавиатура языков не создана")
+            return None
 
+        logger.debug("Создание клавиатуры выбора языков")
         builder = InlineKeyboardBuilder()
         for lang_name, lang_code in Config.LANGUAGES.items():
             builder.button(
                 text=lang_name,
-                callback_data=f"{CallbackData.LANG_PREFIX}{lang_code}"
+                callback_data=f"{CallbackData.LANG_PREFIX.value}{lang_code}"
             )
-        builder.adjust(2)
+        builder.adjust(columns)
         return builder.as_markup()
 
     @staticmethod
-    def get_translator_control_keyboard() -> InlineKeyboardBuilder:
+    def get_translator_control_keyboard(columns: int = 1) -> InlineKeyboardMarkup:
         """
         Создает inline-клавиатуру для управления переводчиком.
 
+        Args:
+            columns: Количество столбцов для кнопок (по умолчанию 1).
+
         Returns:
-            InlineKeyboardBuilder: Клавиатура с кнопками управления
+            InlineKeyboardBuilder: Клавиатура с кнопками управления.
         """
+        logger.debug("Создание клавиатуры управления переводчиком")
         builder = InlineKeyboardBuilder()
-        builder.button(text="🔀 Сменить язык", callback_data=CallbackData.CHANGE_LANG)
-        builder.button(text="🏠 Закончить", callback_data=CallbackData.MAIN_MENU)
+        builder.button(
+            text=Keyboards.BUTTON_TEXTS["change_lang"],
+            callback_data=CallbackData.CHANGE_LANG.value
+        )
+        builder.add(Keyboards._get_exit_button(CallbackData.END_TRANS))
+        builder.adjust(columns)
         return builder.as_markup()

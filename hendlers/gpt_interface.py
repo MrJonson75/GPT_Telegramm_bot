@@ -1,51 +1,48 @@
-'''
-                Общее описание модуля:
-        Этот модуль реализует функционал взаимодействия с ChatGPT в Telegram-боте с использованием:
+"""
+Модуль для взаимодействия с ChatGPT в Telegram-боте.
 
-        1.	Finite State Machine (FSM) для управления состоянием диалога
-        2.	Отдельных утилит для работы с изображениями и ChatGPT API
-        3.	Кастомных клавиатур для улучшения UX
+Основные функции:
+- Активация диалога по команде /gpt или упоминанию "gpt"
+- Обработка вопросов пользователей через ChatGPT API
+- Использование Finite State Machine (FSM) для управления диалогом
+- Предоставление клавиатуры для завершения диалога
+- Отправка тематических изображений для улучшения UX
 
-        Особенности:
-
-        1.	Активация диалога происходит по команде /gpt или при упоминании "gpt" в тексте
-        2.	Перед началом диалога отправляется тематическое изображение
-        3.	После каждого ответа предлагается кнопка для завершения диалога
-        4.	Используется FSM для контроля состояния диалога
-
-'''
+"""
+import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from keybords import Keyboards, CallbackData
+from utils.images import send_image
+from utils.chatgpt import get_chatgpt_response
+from config import Config
 
-from keybords import Keyboards  # Модуль с клавиатурами
-from utils.images import send_image  # Утилита для отправки изображений
-from config import Config  # Конфигурация приложения
-from utils.chatgpt import get_chatgpt_response  # Утилита для работы с ChatGPT
+# Настройка логирования
+logger = logging.getLogger(__name__)
 
 # Создаем роутер для обработки сообщений, связанных с ChatGPT
 gpt_router = Router()
 
-
-# Класс состояний Finite State Machine (FSM) для управления диалогом
 class ChatState(StatesGroup):
     """
-    Состояния для управления диалогом с ChatGPT.
+    Класс состояний Finite State Machine (FSM) для управления диалогом с ChatGPT.
 
-    Атрибуты:
+    Состояния:
         waiting_for_question: Состояние ожидания вопроса пользователя
     """
     waiting_for_question = State()
 
 
-# Обработчик команды /gpt или сообщений, содержащих "gpt"
 @gpt_router.message(F.text.lower().contains("gpt"))
 async def handle_gpt(message: Message, state: FSMContext):
     """
-    Обрабатывает команду запуска диалога с ChatGPT.
+    Обработчик команды запуска диалога с ChatGPT.
 
-    Параметры:
+    Активируется по команде /gpt или при упоминании "gpt" в тексте.
+
+    Args:
         message: Объект сообщения от пользователя
         state: Контекст состояния FSM
 
@@ -54,53 +51,69 @@ async def handle_gpt(message: Message, state: FSMContext):
         2. Приглашает пользователя задать вопрос
         3. Устанавливает состояние ожидания вопроса
     """
-    # Отправляем заранее заготовленное изображение
-    await send_image(message, Config.IMAGE_PATHS["gpt"])
-    answer_text = Config.get_messages('gpt')
-    await message.answer(answer_text)
-    # Переходим в состояние ожидания вопроса
+    logger.debug(f"Пользователь {message.from_user.id} запустил диалог с ChatGPT")
+    try:
+        # Отправляем тематическое изображение
+        await send_image(message, Config.IMAGE_PATHS["gpt"])
+    except KeyError:
+        logger.warning("Изображение для команды 'gpt' не найдено")
+
+    # Получаем приветственное сообщение
+    answer_text = Config.get_messages('gpt') or "Задайте свой вопрос ChatGPT:"
+    await message.answer(answer_text, reply_markup=Keyboards.get_gpt_exit_keyboard())
+    # Устанавливаем состояние ожидания вопроса
     await state.set_state(ChatState.waiting_for_question)
+    logger.debug(f"Установлено состояние ChatState.waiting_for_question для пользователя {message.from_user.id}")
 
-
-# Обработчик текстовых сообщений в состоянии ожидания вопроса
 @gpt_router.message(ChatState.waiting_for_question)
 async def handle_chatgpt_question(message: Message, state: FSMContext):
     """
-    Обрабатывает вопрос пользователя и возвращает ответ от ChatGPT.
+    Обработчик вопросов пользователя в состоянии диалога с ChatGPT.
 
-    Параметры:
+    Args:
         message: Объект сообщения с вопросом пользователя
         state: Контекст состояния FSM
 
     Действия:
-        1. Отправляет запрос к API ChatGPT
+        1. Отправляет запрос к ChatGPT API
         2. Отправляет ответ пользователю
-        3. Предлагает клавиатуру с опцией завершения диалога
+        3. Предлагает клавиатуру для завершения диалога
     """
-    # Отправляем запрос к ChatGPT
-    response = await get_chatgpt_response(message.text)
+    logger.debug(f"Пользователь {message.from_user.id} задал вопрос: {message.text}")
+    try:
+        # Отправляем запрос к ChatGPT
+        response = await get_chatgpt_response(message.text)
+        logger.debug(f"Получен ответ от ChatGPT: {response}")
+    except Exception as e:
+        logger.error(f"Ошибка получения ответа от ChatGPT: {str(e)}")
+        await message.answer("Не удалось получить ответ. Попробуйте снова.", reply_markup=Keyboards.get_gpt_exit_keyboard())
+        return
+
     await message.answer(
         response,
-        reply_markup=Keyboards.get_gpt_exit_keyboard(),  # Клавиатура с кнопкой "Закончить"
+        reply_markup=Keyboards.get_gpt_exit_keyboard()
     )
 
-
-# Обработчик нажатия кнопки "Закончить" (на самом деле кнопки "start" по текущему коду)
-@gpt_router.callback_query(F.data == "break")
+@gpt_router.callback_query(F.data == CallbackData.BREAK)
 async def end_chat(callback: CallbackQuery, state: FSMContext):
     """
-    Завершает диалог с ChatGPT по запросу пользователя.
+    Обработчик завершения диалога с ChatGPT.
 
-    Параметры:
+    Args:
         callback: Объект callback-запроса от кнопки
         state: Контекст состояния FSM
 
     Действия:
         1. Очищает состояние FSM
         2. Отправляет сообщение о завершении диалога
-        3. Подтверждает обработку callback-запроса
+        3. Показывает главное меню
+        4. Подтверждает обработку callback
     """
-    await state.clear()  # Сбрасываем состояние
-    await callback.message.answer("Диалог завершён. До новых встреч!")
-    await callback.answer()  # Подтверждаем обработку callback
-    await callback.message.answer("/start")  # Отправляем команду /start
+    logger.debug(f"Пользователь {callback.from_user.id} завершил диалог с ChatGPT")
+    await state.clear()
+    await callback.message.answer(
+        "Диалог с ChatGPT завершён. Начните заново с /gpt или вернитесь в меню с /start.",
+        reply_markup=Keyboards.main_menu()
+    )
+    await callback.answer()
+

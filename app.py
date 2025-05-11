@@ -36,6 +36,10 @@ async def main():
 if __name__ == '__main__':
     # Настройка логирования в файл bot_log.log с уровнем INFO
     # logging.basicConfig(filename='bot_log.log', level=logging.INFO)
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
 
 
 

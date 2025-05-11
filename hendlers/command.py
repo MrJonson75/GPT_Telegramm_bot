@@ -119,4 +119,4 @@ async def handle_start_callback(callback: CallbackQuery, state: FSMContext) -> N
             "Произошла ошибка. Попробуйте позже.",
             reply_markup=Keyboards.main_menu()
         )
-        await callback.answer()
+    await callback.answer()

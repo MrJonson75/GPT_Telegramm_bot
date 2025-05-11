@@ -5,15 +5,14 @@
 - handle_random: Обработчик сообщений с запросом случайного факта
 - handle_more_fact: Обработчик callback-запросов на получение дополнительного случайного факта
 - handle_end_random: Обработчик callback-запросов на завершение взаимодействия
-
 """
 import logging
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from keybords import Keyboards, CallbackData
-from utils.images import send_image
 from utils.chatgpt import get_chatgpt_response
 from config import Config
+from utils.callback_finality import callback_finality
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -30,16 +29,10 @@ async def handle_random(message: Message):
     - message: Объект сообщения от пользователя
 
     Действия:
-    1. Отправляет изображение из указанного в конфиге пути
-    2. Получает ответ от ChatGPT с использованием промпта для случайных фактов
-    3. Отправляет ответ пользователю с клавиатурой для запроса дополнительного факта
+    1. Получает ответ от ChatGPT с использованием промпта для случайных фактов
+    2. Отправляет изображение с фактом в качестве подписи и клавиатурой
     """
     logger.debug(f"Пользователь {message.from_user.id} запросил случайный факт")
-    try:
-        # Отправляем изображение из пути, указанного в конфиге
-        await send_image(message, Config.IMAGE_PATHS["random"])
-    except KeyError:
-        logger.warning("Изображение для команды 'random' не найдено")
 
     # Получаем ответ от ChatGPT
     try:
@@ -47,14 +40,40 @@ async def handle_random(message: Message):
         logger.debug(f"Получен факт: {response}")
     except Exception as e:
         logger.error(f"Ошибка получения факта: {str(e)}")
-        await message.answer("Не удалось получить факт. Попробуйте снова.")
+        await message.answer(
+            "Не удалось получить факт. Попробуйте снова.",
+            reply_markup=Keyboards.get_random_fact_keyboard()
+        )
         return
 
-    # Отправляем ответ пользователю с клавиатурой
-    await message.answer(
-        response,
-        reply_markup=Keyboards.get_random_fact_keyboard()
-    )
+    # Отправляем изображение с подписью и клавиатурой
+    try:
+        image_path = Config.IMAGE_PATHS["random"]
+        photo = FSInputFile(path=image_path)
+        await message.answer_photo(
+            photo=photo,
+            caption=response,
+            reply_markup=Keyboards.get_random_fact_keyboard()
+        )
+        logger.debug(f"Отправлено изображение {image_path} с фактом для user_id={message.from_user.id}")
+    except KeyError:
+        logger.warning("Изображение для команды 'random' не найдено")
+        await message.answer(
+            response,
+            reply_markup=Keyboards.get_random_fact_keyboard()
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
+        await message.answer(
+            response,
+            reply_markup=Keyboards.get_random_fact_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
+        await message.answer(
+            "Произошла ошибка. Попробуйте снова.",
+            reply_markup=Keyboards.get_random_fact_keyboard()
+        )
 
 @rand_router.callback_query(F.data == CallbackData.RANDOM)
 async def handle_more_fact(callback: CallbackQuery):
@@ -82,11 +101,14 @@ async def handle_end_random(callback: CallbackQuery):
 
     Действия:
     1. Отправляет подтверждение о получении callback
-    2. Отправляет сообщение о завершении и главное меню
+    2. Отправляет изображение с сообщением о завершении и главное меню
     """
     logger.debug(f"Пользователь {callback.from_user.id} завершил взаимодействие с фактами")
     await callback.answer()
-    await callback.message.answer(
-        "Спасибо за интерес к фактам! Начните заново с /random или вернитесь в меню с /start.",
-        reply_markup=Keyboards.main_menu()
-    )
+
+    # Отправка изображения с подписью и главным меню
+    try:
+        await callback_finality(callback)
+        logger.debug(f"Выполнена callback_finality для user_id={callback.from_user.id}")
+    except Exception as e:
+        logger.error(f"Ошибка в callback_finality: {str(e)}")

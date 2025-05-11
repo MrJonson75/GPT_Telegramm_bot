@@ -12,7 +12,7 @@
 """
 import logging
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from keybords import Keyboards
@@ -34,34 +34,45 @@ async def handle_start(message: Message, state: FSMContext = None) -> None:
     Обработчик команды /start.
 
     Действия:
-    1. Отправляет главное изображение из конфига
-    2. Отправляет приветственное сообщение из конфига
-    3. Отображает главное меню с клавиатурой
-    4. Очищает сессии пользователя
-    5. Сбрасывает состояние FSM (если передан state)
+    1. Отправляет главное изображение с подписью из конфига и главным меню
+    2. Очищает сессии пользователя
+    3. Сбрасывает состояние FSM (если передан state)
 
     Args:
         message: Объект сообщения от пользователя
         state: Контекст состояния FSM (опционально, для callback)
     """
+
     user_id = message.from_user.id
     logger.debug(f"Пользователь {user_id} вызвал команду /start")
 
+    # Получаем текст сообщения
+    answer_text = Config.get_messages('main') or "Добро пожаловать! Выберите действие в меню."
+
+    # Отправка изображения с подписью
     try:
-        await send_image(message, Config.IMAGE_PATHS['main'])
+        image_path = Config.IMAGE_PATHS['main']
+        photo = FSInputFile(path=image_path)
+        await message.answer_photo(
+            photo=photo,
+            caption=answer_text,
+            reply_markup=Keyboards.main_menu()
+        )
+        logger.debug(f"Отправлено изображение {image_path} с подписью для user_id={user_id}")
     except KeyError:
         logger.warning(f"Изображение 'main' не найдено в Config.IMAGE_PATHS")
-    except Exception as e:
-        logger.error(f"Ошибка отправки изображения: {str(e)}")
-
-    answer_text = Config.get_messages('main') or "Добро пожаловать! Выберите действие в меню."
-    try:
+        await message.answer(
+            answer_text,
+            reply_markup=Keyboards.main_menu()
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл изображения {image_path} не найден")
         await message.answer(
             answer_text,
             reply_markup=Keyboards.main_menu()
         )
     except Exception as e:
-        logger.error(f"Ошибка отправки сообщения: {str(e)}")
+        logger.error(f"Ошибка отправки изображения: {str(e)}")
         await message.answer(
             "Произошла ошибка. Попробуйте позже.",
             reply_markup=Keyboards.main_menu()
@@ -83,7 +94,6 @@ async def handle_start(message: Message, state: FSMContext = None) -> None:
     if state:
         await state.clear()
         logger.debug(f"Сброшено состояние FSM для user_id={user_id}")
-
 
 @comm_router.callback_query(F.data == "start")
 async def handle_start_callback(callback: CallbackQuery, state: FSMContext) -> None:

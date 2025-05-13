@@ -311,7 +311,8 @@ async def handle_translation(message: Message, state: FSMContext):
         return
 
     # Подготовка текста
-    answer_text = f"Перевод ({language}):\n\n{translation}"
+    out_language = ''.join([key for key, value in Config.LANGUAGES.items() if str(value) == language])
+    answer_text = f"Перевод ({out_language}):\n\n{translation}"
     if len(answer_text) > 1024:
         answer_text = answer_text[:1020] + "..."
         logger.warning(f"Подпись для перевода обрезана до 1024 символов: {answer_text}")
